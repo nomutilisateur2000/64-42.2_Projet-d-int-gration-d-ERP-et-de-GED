@@ -60,7 +60,9 @@ public class FlowManager {
     }
 
     public boolean integrate(Set<Integer> receipt, Connexion connexion) throws Exception {
-
+        if (receipt.isEmpty()) {
+            return false;
+        }
         for (Integer i : receipt) {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("http://157.26.83.80:2240/api/flow/validate/" + i))
