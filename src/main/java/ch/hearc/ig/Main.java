@@ -39,6 +39,8 @@ public class Main {
 
         System.out.println(quittances);
 
-
+    if (flowManager.integrate(quittances, connexion)){
+        System.out.println("Integrate successful");
+    }
     }
 }
