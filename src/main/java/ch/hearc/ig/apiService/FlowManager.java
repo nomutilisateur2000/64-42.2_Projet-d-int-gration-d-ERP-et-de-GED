@@ -1,5 +1,6 @@
 package ch.hearc.ig.apiService;
 
+import ch.hearc.ig.business.Receipt;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -7,8 +8,8 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.HashSet;
-import java.util.Set;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 public class FlowManager {
 
@@ -18,8 +19,8 @@ public class FlowManager {
     public FlowManager() {
     }
 
-    public Set<Integer> getValidatedReceipt(Connexion connexion) throws Exception {
-        Set<Integer> receipt = new HashSet<>();
+    public Map<Integer, Receipt> getValidatedReceipt(Connexion connexion) throws Exception {
+        Map<Integer, Receipt> receipt = new HashMap<>();
 
         String json = """
                 {
@@ -44,26 +45,88 @@ public class FlowManager {
         }
 
 
-        return extractReceiptID(response.body());
+        return extractReceiptMetaData(response.body());
     }
 
-    public Set<Integer> extractReceiptID(String jsonResponse) throws Exception {
-        Set<Integer> receipt = new HashSet<>();
+    public Map<Integer, Receipt> extractReceiptMetaData(String jsonResponse) throws Exception {
 
-        JsonNode array = mapper.readTree(jsonResponse);
+        Map<Integer, Receipt> receipts = new HashMap<>();
 
-        for (JsonNode node : array) {
-            receipt.add(node.get("ObjectID").asInt());
+        JsonNode rootArray = mapper.readTree(jsonResponse);
+
+        for (JsonNode node : rootArray) {
+
+            Receipt receipt = new Receipt();
+
+            Integer id = node.get("ObjectID").asInt();
+            receipt.setId(id);
+
+            JsonNode fields = node.get("Fields");
+
+            for (JsonNode field : fields) {
+
+                String code = field.get("Code").asText();
+                String value = field.get("Value").asText();
+
+                switch (code) {
+
+                    case "QB_Total":
+                        if (!value.isEmpty()) {
+                            receipt.setAmount(Double.parseDouble(value));
+                        }
+                        break;
+
+                    case "QB_DESC":
+                        receipt.setDescription(value);
+                        break;
+
+                    case "QB_TYPE":
+                        receipt.setReceiptType(value);
+                        break;
+
+                    case "QB_EME":
+                        receipt.setReceiptIssuer(value);
+                        break;
+
+                    case "QB_Validateur":
+                        receipt.setValidator(value);
+                        break;
+
+                    case "QB_Créateur":
+                        receipt.setRequestCreator(value);
+                        break;
+
+                    case "QB_DATE_DEMANDE":
+                        receipt.setRequestDate(value);
+                        break;
+
+                    case "QB_DATE_DEP":
+                        receipt.setDateReceipt(parseDate(value));
+                        break;
+                }
+            }
+
+            receipts.put(id, receipt);
         }
 
-        return receipt;
+        return receipts;
     }
 
-    public boolean integrate(Set<Integer> receipt, Connexion connexion) throws Exception {
+    private Date parseDate(String value) {
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy");
+            return sdf.parse(value);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public boolean integrate(Map<Integer, Receipt> receipt, Connexion connexion) throws Exception {
         if (receipt.isEmpty()) {
             return false;
         }
-        for (Integer i : receipt) {
+
+        for (Integer i : receipt.keySet()) {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("http://157.26.83.80:2240/api/flow/validate/" + i))
                     .header("Content-Type", "application/json")
