@@ -1,5 +1,7 @@
 package ch.hearc.ig.business;
 
+import ch.hearc.ig.apiService.annotation.QbField;
+
 import java.util.Date;
 
 public class Receipt {
@@ -27,6 +29,7 @@ public class Receipt {
         this.validator = validator;
     }
 
+
     public Integer getId() {
         return id;
     }
@@ -39,65 +42,57 @@ public class Receipt {
         return amount;
     }
 
-    public void setAmount(Double amount) {
-        this.amount = amount;
-    }
+    @QbField("QB_Total")
+    public void setAmount(Double amount) { this.amount = amount; }
 
     public Date getDateReceipt() {
         return dateReceipt;
     }
 
-    public void setDateReceipt(Date dateReceipt) {
-        this.dateReceipt = dateReceipt;
-    }
+    @QbField("QB_DATE_DEP")
+    public void setDateReceipt(Date dateReceipt) { this.dateReceipt = dateReceipt; }
 
     public String getDescription() {
         return description;
     }
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
+    @QbField("QB_DESC")
+    public void setDescription(String description) { this.description = description; }
 
     public String getReceiptType() {
         return receiptType;
     }
 
-    public void setReceiptType(String receiptType) {
-        this.receiptType = receiptType;
-    }
+    @QbField("QB_TYPE")
+    public void setReceiptType(String receiptType) { this.receiptType = receiptType; }
 
     public String getRequestCreator() {
         return requestCreator;
     }
 
-    public void setRequestCreator(String requestCreator) {
-        this.requestCreator = requestCreator;
-    }
+    @QbField("QB_Créateur")
+    public void setRequestCreator(String requestCreator) { this.requestCreator = requestCreator; }
 
     public String getRequestDate() {
         return requestDate;
     }
 
-    public void setRequestDate(String requestDate) {
-        this.requestDate = requestDate;
-    }
+    @QbField("QB_DATE_DEMANDE")
+    public void setRequestDate(String requestDate) { this.requestDate = requestDate; }
 
     public String getValidator() {
         return validator;
     }
 
-    public void setValidator(String validator) {
-        this.validator = validator;
-    }
+    @QbField("QB_Validateur")
+    public void setValidator(String validator) { this.validator = validator; }
 
     public String getReceiptIssuer() {
         return receiptIssuer;
     }
 
-    public void setReceiptIssuer(String receiptIssuer) {
-        this.receiptIssuer = receiptIssuer;
-    }
+    @QbField("QB_EME")
+    public void setReceiptIssuer(String receiptIssuer) { this.receiptIssuer = receiptIssuer; }
 
     @Override
     public String toString() {

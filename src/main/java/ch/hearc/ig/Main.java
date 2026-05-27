@@ -43,7 +43,7 @@ public class Main {
         }
     }while (!valid);
 
-    quittances = flowManager.getValidatedReceipt(connexion);
+    quittances = flowManager.getValidatedReceipts(connexion);
 
     if (flowManager.integrate(quittances, connexion)){
         System.out.println(quittances.size() + " Receipts have been integrated");
@@ -51,4 +51,5 @@ public class Main {
     System.out.println("The following receipts have been integrated :");
     for (Integer i : quittances.keySet()) System.out.println(quittances.get(i));
     }
+
 }

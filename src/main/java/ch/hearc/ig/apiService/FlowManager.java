@@ -1,9 +1,12 @@
 package ch.hearc.ig.apiService;
 
+import ch.hearc.ig.apiService.deserializer.ReceiptDeserializer;
 import ch.hearc.ig.business.Receipt;
-import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -14,18 +17,23 @@ import java.util.*;
 public class FlowManager {
 
     private final HttpClient client = HttpClient.newHttpClient();
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper;
+
 
     public FlowManager() {
+        this.mapper = new ObjectMapper();
+        SimpleModule module = new SimpleModule();
+        module.addDeserializer(Receipt.class, new ReceiptDeserializer());
+        this.mapper.registerModule(module);
     }
 
-    public Map<Integer, Receipt> getValidatedReceipt(Connexion connexion) throws Exception {
-        Map<Integer, Receipt> receipt = new HashMap<>();
+    public Map<Integer, Receipt> getValidatedReceipts(Connexion connexion)
+            throws IOException, InterruptedException {
 
         String json = """
                 {
                     "searchPattern": "QB_FLUX|l01|Validée|list",
-                    "contentTypeIDs": "247"
+                    "contentTypeIDs": "263"
                 }
                 """;
 
@@ -37,109 +45,39 @@ public class FlowManager {
                 .POST(HttpRequest.BodyPublishers.ofString(json))
                 .build();
 
-        HttpResponse<String> response =
-                client.send(request, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() != 200) {
             throw new RuntimeException("Search failed: " + response.body());
         }
 
+        List<Receipt> receipts = mapper.readValue(response.body(), new TypeReference<>() {});
 
-        return extractReceiptMetaData(response.body());
+        Map<Integer, Receipt> result = new HashMap<>();
+        for (Receipt r : receipts) {
+            result.put(r.getId(), r);
+        }
+        return result;
     }
 
-    public Map<Integer, Receipt> extractReceiptMetaData(String jsonResponse) throws Exception {
+    public boolean integrate(Map<Integer, Receipt> receipts, Connexion connexion)
+            throws IOException, InterruptedException {
 
-        Map<Integer, Receipt> receipts = new HashMap<>();
+        if (receipts.isEmpty()) return false;
 
-        JsonNode rootArray = mapper.readTree(jsonResponse);
-
-        for (JsonNode node : rootArray) {
-
-            Receipt receipt = new Receipt();
-
-            Integer id = node.get("ObjectID").asInt();
-            receipt.setId(id);
-
-            JsonNode fields = node.get("Fields");
-
-            for (JsonNode field : fields) {
-
-                String code = field.get("Code").asText();
-                String value = field.get("Value").asText();
-
-                switch (code) {
-
-                    case "QB_Total":
-                        if (!value.isEmpty()) {
-                            receipt.setAmount(Double.parseDouble(value));
-                        }
-                        break;
-
-                    case "QB_DESC":
-                        receipt.setDescription(value);
-                        break;
-
-                    case "QB_TYPE":
-                        receipt.setReceiptType(value);
-                        break;
-
-                    case "QB_EME":
-                        receipt.setReceiptIssuer(value);
-                        break;
-
-                    case "QB_Validateur":
-                        receipt.setValidator(value);
-                        break;
-
-                    case "QB_Créateur":
-                        receipt.setRequestCreator(value);
-                        break;
-
-                    case "QB_DATE_DEMANDE":
-                        receipt.setRequestDate(value);
-                        break;
-
-                    case "QB_DATE_DEP":
-                        receipt.setDateReceipt(parseDate(value));
-                        break;
-                }
-            }
-
-            receipts.put(id, receipt);
-        }
-
-        return receipts;
-    }
-
-    private Date parseDate(String value) {
-        try {
-            SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy");
-            return sdf.parse(value);
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    public boolean integrate(Map<Integer, Receipt> receipt, Connexion connexion) throws Exception {
-        if (receipt.isEmpty()) {
-            return false;
-        }
-
-        for (Integer i : receipt.keySet()) {
+        for (Integer id : receipts.keySet()) {
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("http://157.26.83.80:2240/api/flow/validate/" + i))
+                    .uri(URI.create("http://157.26.83.80:2240/api/flow/validate/" + id))
                     .header("Content-Type", "application/json")
                     .header("Accept", "application/json")
                     .header("Authorization", "bearer " + connexion.getToken())
                     .POST(HttpRequest.BodyPublishers.noBody())
                     .build();
 
-            HttpResponse<String> response =
-                    client.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() != 200) {
-                throw new RuntimeException("Integrate failed for ID " + i + ": " + response.body());
+                throw new RuntimeException("Integrate failed for ID " + id + ": " + response.body());
             }
         }
         return true;
