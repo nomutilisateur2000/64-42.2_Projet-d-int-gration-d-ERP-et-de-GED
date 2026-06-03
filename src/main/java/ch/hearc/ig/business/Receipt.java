@@ -14,6 +14,7 @@ public class Receipt {
     private String requestCreator;
     private String requestDate;
     private String validator;
+    private AttachementFile attachementFile;
 
     public Receipt() {}
 
@@ -40,6 +41,14 @@ public class Receipt {
 
     public Double getAmount() {
         return amount;
+    }
+
+    public AttachementFile getFile() {
+        return attachementFile;
+    }
+
+    public void setFile(AttachementFile attachementFile) {
+        this.attachementFile = attachementFile;
     }
 
     @QbField("QB_Total")

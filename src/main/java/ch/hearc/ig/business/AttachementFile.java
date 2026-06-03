@@ -1,6 +1,12 @@
 package ch.hearc.ig.business;
 
-public class File {
+import ch.hearc.ig.apiService.deserializer.FileDeserializer;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonDeserialize(using = FileDeserializer.class)
+public class AttachementFile {
     private String name;
     private String file;
 
